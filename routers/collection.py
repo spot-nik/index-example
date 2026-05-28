@@ -4,9 +4,11 @@ from pydantic import BaseModel
 
 import database
 from routers.index import router as index_router
+from routers.document import router as document_router
 
 router = APIRouter(prefix="/collection", tags=["collections"])
 router.include_router(index_router, prefix="/{collection_name}")
+router.include_router(document_router, prefix="/{collection_name}")
 
 
 class CreateCollectionRequest(BaseModel):
