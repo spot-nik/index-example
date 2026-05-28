@@ -31,7 +31,5 @@ def create_collection(body: CreateCollectionRequest):
 
 @router.delete("/{name}")
 def delete_collection(name: str):
-    if name not in database.db.list_collection_names():
-        raise HTTPException(status_code=404, detail=f"Collection '{name}' not found")
     database.db.drop_collection(name)
     return {"deleted": name}

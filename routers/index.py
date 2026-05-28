@@ -20,13 +20,10 @@ class CreateIndexRequest(BaseModel):
     unique: bool = False
     sparse: bool = False
     ttl: Optional[int] = None  # expireAfterSeconds; forces a single-field index
-    partial_filter_expression: Optional[dict] = None
 
 
 @router.get("")
 def list_indexes(collection_name: str):
-    if collection_name not in database.db.list_collection_names():
-        raise HTTPException(status_code=404, detail=f"Collection '{collection_name}' not found")
     indexes = [dict(idx) for idx in database.db[collection_name].list_indexes()]
     return {"indexes": indexes}
 
@@ -40,14 +37,16 @@ def create_index(collection_name: str, body: CreateIndexRequest):
         raise HTTPException(status_code=400, detail="TTL indexes must be on a single field")
 
     keys = [(f.field, f.direction) for f in body.fields]
-    kwargs: dict = {"unique": body.unique, "sparse": body.sparse}
+    kwargs: dict = {}
 
     if body.name:
         kwargs["name"] = body.name
+    if body.unique:
+        kwargs["unique"] = True
+    if body.sparse:
+        kwargs["sparse"] = True
     if body.ttl is not None:
         kwargs["expireAfterSeconds"] = body.ttl
-    if body.partial_filter_expression:
-        kwargs["partialFilterExpression"] = body.partial_filter_expression
 
     try:
         index_name = database.db[collection_name].create_index(keys, **kwargs)
@@ -59,8 +58,6 @@ def create_index(collection_name: str, body: CreateIndexRequest):
 
 @router.delete("/{index_name}")
 def delete_index(collection_name: str, index_name: str):
-    if collection_name not in database.db.list_collection_names():
-        raise HTTPException(status_code=404, detail=f"Collection '{collection_name}' not found")
     try:
         database.db[collection_name].drop_index(index_name)
     except OperationFailure as e:

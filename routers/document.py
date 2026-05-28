@@ -12,40 +12,25 @@ def _serialize(doc: dict) -> dict:
     return doc
 
 
-def _collection(collection_name: str):
-    if collection_name not in database.db.list_collection_names():
-        raise HTTPException(
-            status_code=404, detail=f"Collection '{collection_name}' not found"
-        )
-    return database.db[collection_name]
-
-
 @router.get("")
 def list_documents(collection_name: str, limit: int = 100, skip: int = 0):
-    col = _collection(collection_name)
-    docs = [_serialize(doc) for doc in col.find().skip(skip).limit(limit)]
+    docs = [_serialize(doc) for doc in database.db[collection_name].find().skip(skip).limit(limit)]
     return {"documents": docs}
 
 
 @router.post("", status_code=201)
 def create_document(collection_name: str, body: dict):
-    col = _collection(collection_name)
-    result = col.insert_one(body)
+    result = database.db[collection_name].insert_one(body)
     return {"created": str(result.inserted_id)}
 
 
 @router.delete("/{document_id}")
 def delete_document(collection_name: str, document_id: str):
-    col = _collection(collection_name)
     try:
         oid = ObjectId(document_id)
     except InvalidId:
-        raise HTTPException(
-            status_code=400, detail=f"Invalid document id '{document_id}'"
-        )
-    result = col.delete_one({"_id": oid})
+        raise HTTPException(status_code=400, detail=f"Invalid document id '{document_id}'")
+    result = database.db[collection_name].delete_one({"_id": oid})
     if result.deleted_count == 0:
-        raise HTTPException(
-            status_code=404, detail=f"Document '{document_id}' not found"
-        )
+        raise HTTPException(status_code=404, detail=f"Document '{document_id}' not found")
     return {"deleted": document_id}
